@@ -1,3 +1,53 @@
+# Instructions how to calibrate an Android smartphone with an april grid
+This short set of instrictions assumes that you're using the app [Android Dataset Recorder](https://github.com/mikwaluk/android-dataset-recorder).
+
+1. Firstly, with the app mentioned before, record a dataset to estimate the camera intrinsics and camera-imu extrinsics with it. This [video](https://www.youtube.com/watch?v=puNXsnrYWTY) gives a nice overview of the entire process.
+2. After recording the data and transferring it to a PC, execute the following command to create a rosbag from the data:
+```
+rosrun kalibr kalibr_bagcreater --folder path/to/data --output-bag path/to/bag 
+```
+The bag can later be used either for calibration, or as an input to a VIO algorithm.
+
+3. Having the bag, it’s possible to run kalibr to estimate the camera intrinsics.
+4. 
+At least for me, kalibr was unable to calibrate a single camera, therefore I used a trick and simulated having 2 cameras by just assigning the same image topic to the second camera. 
+
+The [aprilgrid.yaml file](https://drive.google.com/file/d/1frx54DapXI0BB2fXSUyAQU6LKeduoX7Y/view) describes the calibration grid that I used. It was displayed on the screen of my PC. I followed the instructions from the[Kalibr Wiki](https://github.com/ethz-asl/kalibr/wiki/calibration-targets) and at the end the aprilgrid configuration file `aprilgrid.yaml` had the following content:
+
+```
+target_type: 'aprilgrid'
+tagCols: 6
+tagRows: 6
+tagSize: 0.026
+tagSpacing: 0.2885
+```
+In addition, for the calibration command  I needed to adjust the `--aprox-sync` parameter after the calibration failed with a hint to decrease it.
+
+The calibration command I used was
+```
+$ rosrun kalibr kalibr_calibrate_cameras --bag /path/to/bag --topics /cam0/image_raw /cam0/image_raw --models pinhole-radtan pinhole-radtan --target aprilgrid.yaml --approx-sync 0.0001
+```
+As mentioned before, I used a trick faking a second camera because the calibration failed for just one.
+
+The calibration process resulted with a file `camchain-test.yaml` which contained the intrinsics of both cameras (which were the same, as only one camera was used in the reality) as well as the calculated baseline between them which was almost 0 (1e-7m).
+
+Then, I was able to finally start the imu-camera calibration (again, simulating the second camera with input form the first one). I also needed to provide noise parameters for the IMU in the imu.yaml file, which I had to guess. I used similar values that had been already in use for VINS-Mobile (apart from the imu fequency which was known to be 50Hz from the dataset recorder):
+```
+accelerometer_noise_density: 0.006
+accelerometer_random_walk: 0.0002
+gyroscope_noise_density: 0.0004
+gyroscope_random_walk: 4.0e-06
+update_rate: 50.0
+rostopic: "/imu"
+```
+The camera-imu calibration command had the form of:
+```
+$ rosrun kalibr kalibr_calibrate_imu_camera --target aprilgrid.yaml --cam path/to/cam/calibration/result --imu imu.yaml --bag /path/to/bag
+```
+This calibration process took a while, but I ended up with a precise estimate of the transformation between imu and camera.
+
+The rest of this file comes from the original Kalibr repo and hasn't been modified.
+
 ![Kalibr](https://raw.githubusercontent.com/wiki/ethz-asl/kalibr/images/kalibr_small.png)
 
 <!--*Ubuntu 14.04+ROS indigo*: [![Build Status](https://jenkins.asl.ethz.ch/buildStatus/icon?job=kalibr_weekly/label=ubuntu-trusty)](https://jenkins.asl.ethz.ch/job/kalibr_weekly/label=ubuntu-trusty/) *Ubuntu 16.04+ROS kinetic*: [![Build Status](https://jenkins.asl.ethz.ch/buildStatus/icon?job=kalibr_weekly/label=ubuntu-trusty)](https://jenkins.asl.ethz.ch/job/kalibr_weekly/label=ubuntu-xenial/)-->
