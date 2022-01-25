@@ -9,7 +9,7 @@ rosrun kalibr kalibr_bagcreater --folder path/to/data --output-bag path/to/bag
 The bag can later be used either for calibration, or as an input to a VIO algorithm.
 
 3. Having the bag, it’s possible to run kalibr to estimate the camera intrinsics.
-4. 
+
 At least for me, kalibr was unable to calibrate a single camera, therefore I used a trick and simulated having 2 cameras by just assigning the same image topic to the second camera. 
 
 The [aprilgrid.yaml file](https://drive.google.com/file/d/1frx54DapXI0BB2fXSUyAQU6LKeduoX7Y/view) describes the calibration grid that I used. It was displayed on the screen of my PC. I followed the instructions from the[Kalibr Wiki](https://github.com/ethz-asl/kalibr/wiki/calibration-targets) and at the end the aprilgrid configuration file `aprilgrid.yaml` had the following content:
